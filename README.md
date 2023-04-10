@@ -1,8 +1,9 @@
 # 高级OpenGL
-## 深度测试 [教程链接](https://learnopengl-cn.github.io/04%20Advanced%20OpenGL/01%20Depth%20testing/)
 
-- [ ] 完成**深度测试**学习,并提交Git
-- [ ] 完成**模板测试**学习,并提交Git
+[TOC]
+
+- [x] 完成**深度测试**学习,并提交Git
+- [x] 完成**模板测试**学习,并提交Git
 - [ ] 完成**混合**学习,并提交Git
 - [ ] 完成**面剔除**学习,并提交Git
 - [ ] 完成**帧缓冲**学习,并提交Git
@@ -13,7 +14,7 @@
 - [ ] 完成**实例化**学习,并提交Git
 - [ ] 完成**抗锯齿**学习,并提交Git
 
-[TOC]
+## 深度测试 [教程页](https://learnopengl-cn.github.io/04%20Advanced%20OpenGL/01%20Depth%20testing/)
 
 ---
 
@@ -122,4 +123,138 @@ void main()
 - **牺牲一些性能,使用精度更高的深度缓冲**.
 目前有很多抗深度冲突的技术,但都不能完全解决深度冲突.
 
-[^1]: **非正确投影性质**: 1.远处的物体看起来和近处的物体一样大小，**缺乏透视效果**;2.深度精度会随着深度的增加而线性减小，**导致远处的物体出现深度精度问题**；3.由于深度精度的问题，很容易出现*Z-fighting*现象，即两个物体的深度值非常接近，导致交替显示，看起来**闪烁**。
+## 模板测试 [教程页](https://learnopengl-cn.github.io/04%20Advanced%20OpenGL/02%20Stencil%20testing/)
+
+当片段着色器处理完一个片段之后,<font color=green>模板测试</font>(Stencil Test)会开始执行,与深度测试相同的是它也会丢弃片段,被保留的片段进入深度测试;模板测试是根据*模板缓冲*(Stencil Buffer)来进行的.
+
+一个模板缓冲中,通常每个*模板值*(Stencil Value)是**8位**的.所以每个像素可以有256钟模板值.我们可以自行设置,当某一个片段为某一个模板值时,我们可以决定**是否丢弃**它.
+
+>特性/提示
+每个窗口库都需要为你配置一个模板缓冲;GLFW自动做了这件事,但其他的窗口库不一定会.
+
+模板缓冲案例
+
+![模板缓冲应用案例](https://learnopengl-cn.github.io/img/04/02/stencil_buffer.png)
+
+模板缓冲首先被清除为0,然后填充一个空心的1,场景中的片段只有模板值为1时才被渲染.
+
+模板缓冲允许我们在**渲染片段时**将模板缓冲设定为一个特定的值;通过在**渲染时修改**模板缓冲的内容,我们写入了模板缓冲.在**同一个**(**或接下来**)渲染迭代中,这些值我们可以**读取**,来决定是否丢弃.
+
+大体步骤:
+
+- 启用模板缓冲的写入.
+- 渲染物体,更新模板缓冲.
+- 禁用模板缓冲的写入.
+- 渲染(其他)物体,这次根据模板缓冲的内容丢弃特定的片段.
+
+使用GL_STENCIL_TEST来启用模板测试
+
+``` C++
+glEnable(GL_STENCIL_TEST);
+```
+
+与颜色和深度缓冲一样,每次渲染迭代之前都应该清除缓冲
+
+``` C++
+glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+```
+
+和深度测试的glDepthMask函数一样,模板测试也有类似的函数.glStencilMask允许我们设置一个*位掩码*(*BitMask*),它会与将要写入缓冲的模板值进行**与(**AND**)运算**.默认情况下设置的所有位掩码都为1,不影响输出,但如果我们将其设置为**0x00**,写入缓冲的模板值最后都为0,这与深度测试中*glDepthMask*(*GL_FALSE*)是等价的.
+
+``` C++
+glStencilMask(0xFF); // 每一位写入模板缓冲时都保持原样
+glStencilMask(0x00); // 每一位在写入模板缓冲时都会被改为0(禁止写入)
+```
+
+大部分情况下只会使用**0xFF**与**0x00**作为模板掩码.
+
+### 模板函数
+
+和深度测试一样,模板测试应该通过还是失败,以及他应该如何影响模板缓冲,是由两个函数能够用来配置的; *glStencilFunc*和*glStencilOp*
+
+``` C++
+glStencilFunc(GLenum func, GLint ref, GLuint mask);
+```
+
+- *func*: 设置模板测试函数(Stencil Test Function).这个测试函数将会应用到已储存的模板值上和*ref*上;可用的选项有*GL_NEVER*,*GL_LESS*,*GL_LEQUAL*,*GL_GREATER*,*GL_GEQUAL*,*GL_EQUAL*,*GL_NOTEQUAL*,*GL_ALWAYS*;语义与深度缓冲类似.
+- *ref*: 设置了模板测试的参考值(Rederence Value).模板缓冲的内容将会于这个值进行比较.
+- *mask*: 设置一个掩码,他将会与参考值和存储的模板值在测试比较他们之前进行与(AND)运算,初始情况下所有值都为1.
+
+上述模板测试案例中,函数被设置为:
+
+``` C++
+glStencilFunc(GL_EQUAL, 1, 0xFF);
+```
+
+这会告诉OpenGL,只要一个片段的模板值等于(GL_EQUAL)参考值1,片段将会通过测试并被绘制,否则会被丢弃.
+
+但是*glStencilFunc*仅仅描述了OpenGL应该对模板缓冲内容做什么,但不知道应该如何更新缓冲;需要*glStencilOp*函数.
+
+``` C++
+glStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass);
+```
+
+- **sfail**: 模板测试失败时采取的行为.
+- **defail**: 模板测试通过,但深度测试失败采取的行为.
+- **dppass**: 模板深度测试均通过时采取的行为.
+
+每个选项都可以选用以下的其中一种行为：
+
+|行为|描述|
+|---|---|
+|GL_KEEP|保持当前储存的模板值|
+|GL_ZERO|将模板值设置为0|
+|GL_REPLACE|将模板值设置为glStencilFun的**ref**值|
+|GL_LNCR|如果模板值小于最大值将模板值加1|
+|GL_INCR_WRAP|与GL_INCR一样,但如果模板值超过了最大值则归零|
+|GL_DECR|如果模板值大于最小值则将模板值减1|
+|GL_DECR_WRAP|与GL_DECR一样,但如果模板值小于0则将其设置为最大值|
+|GL_INVERT|按位翻转当前的模板缓冲值|
+
+默认情况下*glStencilOp*是设置为(*GL_KEEP,GL_KEEP,GL_KEEP*)的,所以不论测试结果如何,模板缓冲都会保留他的值.
+
+### 物体轮廓(Object Outlining)
+
+为每个,或一个物体在他周围创建一个有色的边框;步骤如下:
+
+1. 在绘制(需要添加轮廓)物体之前,将模板函数设置为GL_ALWAYS,每当物体的片段被渲染时,将这个片段模板缓冲更新为1.
+2. 渲染物体.
+3. 禁用模板写入以及深度测试.
+4. 将物体缩放一点点.
+5. 使用一个不同的片段着色器,输出一个单独的(边框)颜色.
+6. 再次绘制物体,但只在他们片段的模板值不等于1时才绘制.
+7. 再次启用模板写入和深度测试.
+
+个人理解:
+
+1. 第一遍渲染物体,物体所在的屏幕空间区域模板值为1其余为0.
+2. 禁用模板写入和深度测试
+3. 再次绘制物体(边框),只有模板值不为1,且在物体(边框)所在的屏幕区域绘制.
+4. 再次启用模板写入和深度测试。
+
+轮廓线添加流程
+
+``` C++
+glEnable(GL_DEPTH_TEST);
+glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);  
+
+glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); 
+
+glStencilMask(0x00); // 记得保证我们在绘制地板的时候不会更新模板缓冲
+normalShader.use();
+DrawFloor()  
+
+glStencilFunc(GL_ALWAYS, 1, 0xFF); 
+glStencilMask(0xFF); 
+DrawTwoContainers();
+
+glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+glStencilMask(0x00); 
+glDisable(GL_DEPTH_TEST);
+shaderSingleColor.use(); 
+DrawTwoScaledUpContainers();
+glStencilMask(0xFF);
+glEnable(GL_DEPTH_TEST); 
+```
+
+[^1]: **非正确投影性质**: 1.远处的物体看起来和近处的物体一样大小，**缺乏透视效果**;2.深度精度会随着深度的增加而线性减小，**导致远处的物体出现深度精度问题**；3.由于深度精度的问题，很容易出现*Z-fighting*现象，即两个物体的深度值非常接近，导致交替显示，看起来**闪烁**.

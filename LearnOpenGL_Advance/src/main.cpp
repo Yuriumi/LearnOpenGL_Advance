@@ -64,8 +64,12 @@ int main()
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_ALWAYS, 1, 0xFF); // 所有的片段都应该更新为模板缓冲
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
 	Shader depthShader("./shader/cubeVertex.shader", "./shader/cubeFragment.shader");
+	Shader frameShader("./shader/cubeVertex.shader", "./shader/objectFrameFrag.shader");
 	unsigned int boxTexture = loadTexture("./texture/marble.jpg");
 	unsigned int planeTexture = loadTexture("./texture/metal.png");
 
@@ -172,7 +176,7 @@ int main()
 		process_input(window);
 
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 		// Renderer Code
 		depthShader.use();
@@ -181,6 +185,18 @@ int main()
 		glm::mat4 projection = glm::perspective(glm::radians(mainCamera.fov), screen_Width / screen_Height, 0.1f, 100.0f);
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		
+		glStencilMask(0x00);
+		// Plane
+		glBindVertexArray(planeVAO);
+		glBindTexture(GL_TEXTURE_2D, planeTexture);
+		glUniformMatrix4fv(glGetUniformLocation(depthShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+
+		// object frame
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF); // 启用模板缓冲写入
 		// cube
 		glBindVertexArray(cubeVAO);
 		glActiveTexture(GL_TEXTURE0);
@@ -192,14 +208,35 @@ int main()
 		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
-		// Plane
-		glBindVertexArray(planeVAO);
-		glBindTexture(GL_TEXTURE_2D, planeTexture);
-		glUniformMatrix4fv(glGetUniformLocation(depthShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilMask(0x00); // 禁止模板测试的写入
+		glDisable(GL_DEPTH_TEST);
+
+		frameShader.use();
+		glUniformMatrix4fv(glGetUniformLocation(frameShader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(frameShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+		// cube frame
+		glBindVertexArray(cubeVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, boxTexture);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+		model = glm::scale(model, glm::vec3(1.02f));
+		glUniformMatrix4fv(glGetUniformLocation(frameShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(1.02f));
+		glUniformMatrix4fv(glGetUniformLocation(frameShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glBindVertexArray(0);
 
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		glEnable(GL_DEPTH_TEST);
+		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}

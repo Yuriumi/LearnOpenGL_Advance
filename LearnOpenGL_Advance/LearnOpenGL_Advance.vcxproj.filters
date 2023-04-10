@@ -90,6 +90,7 @@
   <ItemGroup>
     <None Include="shader\cubeVertex.shader" />
     <None Include="shader\cubeFragment.shader" />
+    <None Include="shader\objectFrameFrag.shader" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="texture\awesomeface.png">
