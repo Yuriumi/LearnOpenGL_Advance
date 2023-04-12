@@ -164,8 +164,11 @@
     <None Include="shader\objectFrameFrag.shader" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="texture\awesomeface.png" />
+    <Image Include="texture\blending_transparent_window.png" />
     <Image Include="texture\container.jpg" />
+    <Image Include="texture\grass.png" />
+    <Image Include="texture\marble.jpg" />
+    <Image Include="texture\metal.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

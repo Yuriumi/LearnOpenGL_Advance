@@ -93,10 +93,19 @@
     <None Include="shader\objectFrameFrag.shader" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="texture\awesomeface.png">
+    <Image Include="texture\container.jpg">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="texture\container.jpg">
+    <Image Include="texture\grass.png">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="texture\marble.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="texture\metal.png">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="texture\blending_transparent_window.png">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>
